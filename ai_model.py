@@ -20,6 +20,21 @@ class AIModel(ABC):
         pass
 
     @staticmethod
+    def find_api_key(api_provider, config):
+        env_key = f"{api_provider.upper()}_API_KEY"
+        api_key = os.getenv(env_key)
+        if not api_key:
+            api_key = config.get(f"{api_provider}_api_key")
+        if not api_key:
+            home_path = os.path.expanduser("~")
+            key_file = os.path.join(home_path, f".{api_provider}.apikey")
+            try:
+                api_key = open(key_file, "r").readline().strip()
+            except FileNotFoundError:
+                raise ValueError(f"No API key found for {api_provider}")
+        return api_key
+
+    @staticmethod
     def get_model_client(config):
         api_provider=config["api"]
 
@@ -27,7 +42,8 @@ class AIModel(ABC):
             api_provider = "groq"
         
         if api_provider == "groq":
-            return GroqModel(api_key=os.environ.get("GROQ_API_KEY"))
+            api_key = AIModel.find_api_key(api_provider, config)
+            return GroqModel(api_key=api_key)
         
         elif api_provider == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
